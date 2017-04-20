@@ -15,6 +15,7 @@ import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.Html;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -152,7 +153,6 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         //Adapter før, hvor der er brugt en arrayliste (bag) til database
             //adapter =  new ArrayAdapter<Product>(this, android.R.layout.simple_list_item_checked, bag);
 
-
         //sætter adapter på listviewet
         listView.setAdapter(adapter);
 
@@ -283,6 +283,27 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                 break;
             case R.id.takePhoto:
                 PhotoIntent();
+                break;
+            case R.id.shareShoppingList:
+                Product p;
+                String itemsTekst = "";
+
+                for(int i = 0; i<getMyAdapter().getCount(); i++) {
+                    p = getItem(i);
+                    if(p != null) {
+                        itemsTekst += " - " + p.toString() + "<br/>";
+                    }
+                }
+
+                if(itemsTekst.equals("")) { itemsTekst = "No items yet.";}
+
+                //Deling af shoppinglist
+                Intent sendIntent = new Intent();
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_SUBJECT, "Shoppinglist");
+                sendIntent.putExtra(Intent.EXTRA_TEXT, Html.fromHtml("<html><body><h1>My shoppinglist</h1><ul>" + itemsTekst + "</ul></body></html>"));
+                sendIntent.setType("text/plain"); //fortæller, at det der sendes skal være plan tekst
+                startActivity(sendIntent);
                 break;
         }
 

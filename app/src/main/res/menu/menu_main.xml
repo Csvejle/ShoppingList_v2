@@ -29,6 +29,12 @@
         android:icon="@drawable/camera"
         app:showAsAction="ifRoom"
         >
+    </item>
 
+    <item android:id="@+id/shareShoppingList"
+        android:orderInCategory="20"
+        android:title="@string/shareshoppinglist"
+        app:showAsAction="never"
+        >
     </item>
 </menu>
