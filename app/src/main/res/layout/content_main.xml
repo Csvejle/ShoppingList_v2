@@ -12,22 +12,132 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="org.projects.shoppinglist.MainActivity"
-    tools:showIn="@layout/activity_main">
+    tools:showIn="@layout/activity_main"
+    android:focusable="true"
+    android:id="@+id/layout"
+    android:focusableInTouchMode="true"
+  >
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:text="Welcome to my shopping list"/>
+        android:text="@string/welcomeTxt"
+        android:textAppearance="@style/Headline"
+        android:layout_marginBottom="7dp"/>
 
-    <Button
-        android:id="@+id/addButton"
-        android:text="Add to bag"
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="100"
+        style="@style/marginTopBottom"
+        >
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="60"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingRight="7dp"
+        android:background="@drawable/border"
+        >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/AddItemTxt"
+            android:textStyle="bold"/>
+
+        <EditText
+            android:id="@+id/txtProduktName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hintProduktName"
+            android:textAppearance="@style/inputTxt">
+        </EditText>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            >
+
+        <Spinner
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="left"
+            android:entries="@array/amoutItems"
+            android:id="@+id/amoutList"
+            android:text="@string/or"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/or"
+         />
+
+        <EditText
+            android:id="@+id/txtQuantity"
+            android:layout_width="90dp"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:textAppearance="@style/inputTxt"
+            android:hint="@string/hintQuantity">
+        </EditText>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/addButton"
+            android:text="Add"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:theme="@style/AppTheme.Button"/>
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_weight="40"
+        >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/RemoveTxt"
+            android:textStyle="bold"/>
+
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/buyBTN"
+            android:onClick="onClickBought"
+            android:id="@+id/boughBtn"
+            android:theme="@style/AppTheme.Button"/>
+
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/ClearBTN"
+            android:onClick="onClickClearCart"
+            android:id="@+id/clearCart"
+            android:theme="@style/AppTheme.Button"/>
+    </LinearLayout>
+</LinearLayout>
+    <TextView
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        android:text="@string/ItemTxt"
+        android:textStyle="bold"/>
 
     <ListView
         android:id="@+id/list"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"></ListView>
+        android:layout_height="match_parent"
+
+        android:layout_weight="40"></ListView>
 </LinearLayout>

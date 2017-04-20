@@ -2,9 +2,33 @@
       xmlns:app="http://schemas.android.com/apk/res-auto"
       xmlns:tools="http://schemas.android.com/tools"
       tools:context="org.projects.shoppinglist.MainActivity">
+
     <item
         android:id="@+id/action_settings"
-        android:orderInCategory="100"
+        android:icon="@drawable/settings"
         android:title="@string/action_settings"
         app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/clearCartMenu"
+        android:orderInCategory="1"
+        android:title="@string/ClearBTN"
+        android:icon="@drawable/clearicon"
+        app:showAsAction="always"/>
+
+    <item
+        android:id="@+id/aboutmenupkt"
+        android:orderInCategory="3"
+        android:title="@string/aboutmenupkt"
+        android:icon="@drawable/abouticon"
+        app:showAsAction="ifRoom"/>
+
+    <item android:id="@+id/takePhoto"
+        android:orderInCategory="2"
+        android:title="@string/camera"
+        android:icon="@drawable/camera"
+        app:showAsAction="ifRoom"
+        >
+
+    </item>
 </menu>

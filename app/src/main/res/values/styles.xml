@@ -6,6 +6,10 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+
+
+        <!-- Change font
+        <item name="android:textViewStyle">@style/RobotoTextViewStyle</item> -->
     </style>
 
     <style name="AppTheme.NoActionBar">
@@ -16,5 +20,34 @@
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar"/>
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light"/>
+
+
+    <style name="RobotoTextViewStyle" parent="android:Widget.TextView">
+        <item name="android:fontFamily">casual</item>
+    </style>
+
+     <style name="Headline" parent="@android:style/TextAppearance.Medium">
+        <item name="android:textColor">@color/colorPrimary</item>
+         <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="inputTxt" parent="@android:style/TextAppearance.Medium">
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="marginTopBottom">
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:layout_marginBottom">20dp</item>
+    </style>
+    <style name="AppTheme.Button" parent="Widget.AppCompat.Button.Colored">
+        <item name="colorButtonNormal">@color/colorPrimary</item>
+        <item name="android:textColor">#fff</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="abouttekst">
+        <item name="android:layout_margin">20dp</item>
+    </style>
 
 </resources>

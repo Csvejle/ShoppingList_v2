@@ -1,4 +1,53 @@
 <resources>
     <string name="app_name">ShoppingList</string>
+
+    <!-- Slet dialog tekster-->
+    <string name="confirmation">Confirmation</string>
+    <string name="areYouSure">Are you sure?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+
+
+    <!-- Tekster til main aktivitet layout -->
+    <!-- hints -->
+    <string name="hintProduktName">Productname</string>
+    <string name="hintQuantity">amount</string>
+
+    <!-- tekst til knapper -->
+    <string name="buyBTN">Checked</string>
+    <string name="RemoveTxt">Remove</string>
+    <string name="AddItemTxt">Add item</string>
+    <string name="ClearBTN">All</string>
+
+    <!-- andet tekst-->
+    <string name="ItemTxt">My items</string>
+    <string name="welcomeTxt">Welcome to my shopping list</string>
+    <string name="or">or</string>
+    <string name="enterName">Name</string>
+
+    <!-- menupunkt tekster -->
     <string name="action_settings">Settings</string>
+    <string name="aboutmenupkt">About</string>
+    <string name="camera">Take Photo</string>
+
+    <!-- About tekster -->
+    <string name="aboutheading">About</string>
+    <string name="abouttext">
+        Use this app as a digital shoppinglist.\nThe purpose of the app is helping you organize your shopping, so you save money.\nThis app is a schoolproject I decided to share.\n\nHope you enjoy and happy shopping!\n//Cecilia
+    </string>
+
+
+    <!-- Arrays - til ddl med antal produktet man vil købe -->
+    <string-array name="amoutItems">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>
 </resources>
