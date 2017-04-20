@@ -21,13 +21,17 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import com.firebase.ui.database.FirebaseListAdapter;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,13 +39,17 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
 
 public class MainActivity extends AppCompatActivity implements DeleteDialogFragment.OnPositiveListener
 {
-    ArrayAdapter<Product> adapter;
+    //ArrayAdapter<Product> adapter;
+    FirebaseListAdapter<Product> adapter;
     ListView listView;
-    ArrayList<Product> bag = new ArrayList<Product>();
+    //ArrayList<Product> bag = new ArrayList<Product>();
 
     static DeleteDialogFragment dialog;
     static Context context;
@@ -49,8 +57,9 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
     static final int REQUEST_TAKE_PHOTO = 1;
     static final int REQUEST_SETTINGS = 2;
     String mCurrentPhotoPath;
+    DatabaseReference ref;
 
-    public ArrayAdapter getMyAdapter()
+    public FirebaseListAdapter getMyAdapter()
     {
         return adapter;
     }
@@ -60,6 +69,9 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         super.onCreate(savedInstanceState);
         this.context = this;
         setContentView(R.layout.activity_main);
+
+        ref = FirebaseDatabase.getInstance().getReference().child("products");
+
 
         if(MyPreferenceFragment.wantNotifications(this)){
            /* Toast toast = Toast.makeText(context, "Welcome " + MyPreferenceFragment.getName(this), Toast.LENGTH_LONG);
@@ -94,7 +106,6 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         }
 
 
-
         //Alternatively you can also get access to your saved data
         //in the onCreate method - you would need to do something
         //like this - here commented out:
@@ -104,15 +115,18 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 		{
             ArrayList<Product> saved = savedInstanceState.getParcelableArrayList("SavedBag");
 			if (saved!=null) //did we save something
-				bag = saved;
-
+            {
+                //bag = saved; //Ikke nødvendigt, da data fra DB.
+            }
 		}
         else{
             //add some stuff to the list so we have something
             // to show on app startup
-            bag.add(new Product("Bananas", 2));
-            bag.add(new Product("Apples", 10));
-            bag.add(new Product("Milk", 1));
+
+
+            //bag.add(new Product("Bananas", 2));
+            //bag.add(new Product("Apples", 10));
+            //bag.add(new Product("Milk", 1));
         }
 
 
@@ -126,7 +140,13 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 
         //here we create a new adapter linking the bag and the
         //listview
-        adapter =  new ArrayAdapter<Product>(this, android.R.layout.simple_list_item_checked, bag);
+        //adapter =  new ArrayAdapter<Product>(this, android.R.layout.simple_list_item_checked, bag);
+        adapter = new FirebaseListAdapter<Product>(this, Product.class, android.R.layout.simple_list_item_checked, ref) {
+            @Override
+            protected void populateView(View v, Product model, int position) {
+                ((TextView)v.findViewById(android.R.id.text1)).setText(model.toString());
+            }
+        };
 
         //setting the adapter on the listview
         listView.setAdapter(adapter);
@@ -178,8 +198,10 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                 }
 
                 if(!produktName.isEmpty() && isInt(amount) && produktName.length() > 0 && amount.length() > 0) {
-                        bag.add(new Product(produktName, Integer.parseInt(amount)));
-                        getMyAdapter().notifyDataSetChanged();
+                    //bag.add(new Product(produktName, Integer.parseInt(amount)));
+                    ref.push().setValue(new Product(produktName, Integer.parseInt(amount))); //Føjer nyt projekt
+
+                    getMyAdapter().notifyDataSetChanged();
                         produktInput.getText().clear();
                         amountInput.getText().clear();
                         amoutList.setSelection(0);
@@ -205,6 +227,12 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         });
 
 
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        adapter.cleanup();
     }
 
     @Override
@@ -275,17 +303,22 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         super.onSaveInstanceState(outState);
 
 		/* Here we put code now to save the state */
-        outState.putParcelableArrayList("SavedBag",bag);
+        //outState.putParcelableArrayList("SavedBag",bag); //Ikke nødvendigt, da data fra DB.
 
     }
 
+    /* GET an item  */
+    public Product getItem(int index)
+    {
+        return (Product) getMyAdapter().getItem(index);
+    }
 
     public void onClickBought(View view){
-        ListView selected = (ListView)findViewById(R.id.list);
+      /*  ListView selected = (ListView)findViewById(R.id.list);
         ArrayList<Product> slettet = new ArrayList();
 
         final ArrayList<Product> bagBackUp = new ArrayList<>(); //Laver array til backup
-        bagBackUp.addAll(bag); //Tilføjer bags elementer til backup array
+       // bagBackUp.addAll(bag); //Tilføjer bags elementer til backup array
 
         final View parent = findViewById(R.id.layout); //Finder parent layout
         int count = selected.getCount();  //number of my ListView items
@@ -298,7 +331,7 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
             }
         }
 
-        bag.removeAll(slettet);
+       // bag.removeAll(slettet);
         listView.clearChoices();
         getMyAdapter().notifyDataSetChanged();
 
@@ -310,6 +343,54 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                         //This code will ONLY be executed in case that
                         getMyAdapter().clear(); //Fjerner alt fra bag
                         bag.addAll(bagBackUp); //Tilføjer de elementer der var før sletning
+                        getMyAdapter().notifyDataSetChanged(); //Giver besked på ændring
+
+
+                        //Show the user we have restored the name - but here
+                        //on this snackbar there is NO UNDO - so no SetAction method is called
+                        //if you wanted, you could include a REDO on the second action button
+                        //for instance.
+                        Snackbar snackbar = Snackbar.make(parent, "Old bag restored!", Snackbar.LENGTH_SHORT);
+                        snackbar.show();
+                    }
+                });
+
+        snackbar.show();*/
+
+
+        ListView selected = (ListView)findViewById(R.id.list);
+        final Map<String, Product> bagBackUp = new HashMap<>(); //Laver array til backup
+
+        final View parent = findViewById(R.id.layout); //Finder parent layout
+        int count = selected.getCount();  //number of my ListView items
+
+        SparseBooleanArray checkedItemPositions = selected.getCheckedItemPositions();
+
+        for (int i = 0;i < count;i++){
+            if(checkedItemPositions.get(i)) {
+                //slettet.add((Product)selected.getItemAtPosition(i));
+                getMyAdapter().getRef(i).setValue(null);
+                bagBackUp.put(adapter.getRef(i).getKey(), (Product)selected.getItemAtPosition(i));
+            }
+        }
+
+        listView.clearChoices();
+        getMyAdapter().notifyDataSetChanged();
+
+        Snackbar snackbar = Snackbar
+                .make(parent, "Changes saved", Snackbar.LENGTH_LONG)
+                .setAction("UNDO", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+
+                        //This code will ONLY be executed in case that
+                        //getMyAdapter().clear(); //Fjerner alt fra bag
+                        //bag.addAll(bagBackUp); //Tilføjer de elementer der var før sletning
+
+                        for(String key:bagBackUp.keySet()){
+                            ref.child(key).setValue(bagBackUp.get(key));
+                        }
+
                         getMyAdapter().notifyDataSetChanged(); //Giver besked på ændring
 
 
@@ -341,7 +422,9 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
     }
     @Override
     public void onPositiveClicked() {
-        getMyAdapter().clear();
+       // getMyAdapter().clear();
+
+        ref.removeValue(); //Fjerner alle items fra database
         listView.clearChoices();
         getMyAdapter().notifyDataSetChanged();
 
