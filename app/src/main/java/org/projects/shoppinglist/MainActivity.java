@@ -46,50 +46,60 @@ import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity implements DeleteDialogFragment.OnPositiveListener
 {
-    //ArrayAdapter<Product> adapter;
-    FirebaseListAdapter<Product> adapter;
-    ListView listView;
-    //ArrayList<Product> bag = new ArrayList<Product>();
 
-    static DeleteDialogFragment dialog;
+    DatabaseReference ref; //Database reference
+
+    FirebaseListAdapter<Product> adapter; //Firebaseadapter
+    ListView listView; //
+
+    //ArrayAdapter<Product> adapter; //Tidligere adapter, da det var en Arrayliste, der var database
+    //ArrayList<Product> bag = new ArrayList<Product>(); //Tidligere database
+
+    static DeleteDialogFragment dialog; //Slette dialog
     static Context context;
 
+    //Identifier til intents
     static final int REQUEST_TAKE_PHOTO = 1;
     static final int REQUEST_SETTINGS = 2;
-    String mCurrentPhotoPath;
-    DatabaseReference ref;
 
-    public FirebaseListAdapter getMyAdapter()
-    {
-        return adapter;
-    }
+    String mCurrentPhotoPath; //Billedesti
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        //Sætter context, hvilket er denne aktivitet
         this.context = this;
+
+        //Sætter layout
         setContentView(R.layout.activity_main);
 
+        //Laver reference til firbase database
         ref = FirebaseDatabase.getInstance().getReference().child("products");
 
-
+        //Hvis brugeren ønsker notificationer fortælles der,
+        //hvor mange dage til eller siden, der er shopping dag.
         if(MyPreferenceFragment.wantNotifications(this)){
-           /* Toast toast = Toast.makeText(context, "Welcome " + MyPreferenceFragment.getName(this), Toast.LENGTH_LONG);
-            toast.show();*/
 
             String message = "";
 
+            //Finder gemt dato
             String saveddate =  MyPreferenceFragment.getDate(this);
 
+            //Laver Kalender med ovenstående dato
             Calendar calSaved = Calendar.getInstance();
             calSaved.set(DatePreference.getYear(saveddate), DatePreference.getMonth(saveddate)-1, DatePreference.getDate(saveddate));
 
+            //Før nuværende dato
             Calendar calDateNow = Calendar.getInstance();
 
+            //Beregner forskel i millisekunder
             long diffMillis= Math.abs(calDateNow.getTimeInMillis()-calSaved.getTimeInMillis());
 
+            //Laver ovenstående om til dage
             long differenceInDays = TimeUnit.DAYS.convert(diffMillis, TimeUnit.MILLISECONDS);
 
+            //Laver passende besked
             if(differenceInDays == 0){
                 message = "Remember it's shopping day today.";
             }
@@ -100,47 +110,38 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                 message = "Sopping in "+ differenceInDays + " day(s).";
             }
 
-            Toast toast2 = Toast.makeText(context, message, Toast.LENGTH_LONG);
+            //Giver brugeren den lavede besked
+            Toast toast2 = Toast.makeText(context, message + " " + MyPreferenceFragment.getName(context), Toast.LENGTH_LONG);
             toast2.show();
-
         }
 
-
-        //Alternatively you can also get access to your saved data
-        //in the onCreate method - you would need to do something
-        //like this - here commented out:
-        //I actually recommend doing the restore in the onCreate
-        //method instead of in the onRestoreInstanceState method
+        //er der gemt noget, som skal bruges til, at genskabe tidligere stadie
 		if (savedInstanceState!=null)
 		{
             ArrayList<Product> saved = savedInstanceState.getParcelableArrayList("SavedBag");
-			if (saved!=null) //did we save something
+
+			if (saved!=null)
             {
                 //bag = saved; //Ikke nødvendigt, da data fra DB.
             }
 		}
         else{
-            //add some stuff to the list so we have something
-            // to show on app startup
 
-
+            //Tidligere tilføjelse af data, når der ikke er noget gemt i bag arraylisten
             //bag.add(new Product("Bananas", 2));
             //bag.add(new Product("Apples", 10));
             //bag.add(new Product("Milk", 1));
         }
 
 
-
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        //getting our listiew - you can check the ID in the xml to see that it
-        //is indeed specified as "list"
+        //Finder listview fra layout
         listView = (ListView) findViewById(R.id.list);
 
-        //here we create a new adapter linking the bag and the
-        //listview
-        //adapter =  new ArrayAdapter<Product>(this, android.R.layout.simple_list_item_checked, bag);
+
+        //Laver FirebaseListAdapter adapter
         adapter = new FirebaseListAdapter<Product>(this, Product.class, android.R.layout.simple_list_item_checked, ref) {
             @Override
             protected void populateView(View v, Product model, int position) {
@@ -148,23 +149,30 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
             }
         };
 
-        //setting the adapter on the listview
+        //Adapter før, hvor der er brugt en arrayliste (bag) til database
+            //adapter =  new ArrayAdapter<Product>(this, android.R.layout.simple_list_item_checked, bag);
+
+
+        //sætter adapter på listviewet
         listView.setAdapter(adapter);
 
 
-        //here we set the choice mode - meaning in this case we can
-        //only select one item at a time.
+        //Fortæller at bruger skal have mulighed for, at vælge flere items i listen.
         listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
 
+        //Finder add knap fra layout
         Button addButton = (Button) findViewById(R.id.addButton);
+
+        //Lavet klik event til knap
         addButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 final View parent = findViewById(R.id.layout); //Finder parent layout
+                String msg = ""; //Besked til bruger
+                Boolean ok = false; //Om oprettelsen er ok
 
-                String msg ="";
-                Boolean ok = false;
 
+                // -- Validering af input -- //
                 EditText produktInput = (EditText) findViewById(R.id.txtProduktName);
                 String produktName = "";
 
@@ -196,25 +204,37 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                         msg += "* Cannot find your amount :(. *";
                     }
                 }
+                // ------- //
+
 
                 if(!produktName.isEmpty() && isInt(amount) && produktName.length() > 0 && amount.length() > 0) {
-                    //bag.add(new Product(produktName, Integer.parseInt(amount)));
-                    ref.push().setValue(new Product(produktName, Integer.parseInt(amount))); //Føjer nyt projekt
+                    //Tilføjer nyt produkt
+                    ref.push().setValue(new Product(produktName, Integer.parseInt(amount)));
 
+                    //Fortæller der er sket ændringer i data
                     getMyAdapter().notifyDataSetChanged();
-                        produktInput.getText().clear();
-                        amountInput.getText().clear();
-                        amoutList.setSelection(0);
-                        ok = true;
 
-                        //the following two lines hide the keyboard after clicking the button
-                        //which is what you want!
-                        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                        imm.hideSoftInputFromWindow(parent.getWindowToken(), 0);
+                    //Gør klar til, at brugeren kan tilføje et nyt produkt
+                    produktInput.getText().clear();
+                    amountInput.getText().clear();
+                    amoutList.setSelection(0);
+
+                    //Fortæller at produktet er oprettet
+                    ok = true;
+
+                    //Fjerner keyboard efter klik på knap
+                    InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(parent.getWindowToken(), 0);
+
+
+                    //Tilføjelse af nyt produkt før
+                    //bag.add(new Product(produktName, Integer.parseInt(amount)));
                 }
                 else { msg = "You have not typed both an amount and productname."; }
 
                 if(!ok) {
+
+                    //Giver besked på, at der ikke er fuldt det nødvendige data til, at tilføje et nyt produkt
                     Context context = getApplicationContext();
                     CharSequence text = msg;
                     int duration = Toast.LENGTH_LONG;
@@ -225,28 +245,27 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 
             }
         });
-
-
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        //Håndter når app er ødelagt
         adapter.cleanup();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
+        //Tilføjer menupunkter til menuen, hvilket er de punkter der er i menu_main filen.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
+        //Håndter når der klikkes på et menupunkt
+
         int id = item.getItemId();
 
         switch (id) {
@@ -272,20 +291,16 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode== REQUEST_SETTINGS) //the code means we came back from settings
+        if (requestCode== REQUEST_SETTINGS)
         {
-            //I can can these methods like this, because they are static
-           /*  boolean notification = MyPreferenceFragment.wantNotifications(this);
-            String name = MyPreferenceFragment.getName(this);
-            String message = "Welcome, "+name+", You want notifications? "+notification;*/
            Toast toast = Toast.makeText(this,"Your settings is saved. :)",Toast.LENGTH_LONG);
-            toast.show();
+           toast.show();
         }
         else if(requestCode == REQUEST_TAKE_PHOTO &&
                 resultCode == RESULT_OK) {
 
             if (mCurrentPhotoPath != null ) {
-                //decoding the file into a bitmap
+                //decoder fil til et bitmap
                 Bitmap imageBitmap =
                         BitmapFactory.decodeFile (mCurrentPhotoPath);
 
@@ -296,14 +311,13 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
     }
 
 
-    //This method is called before our activity is destoryed
+    //Kaldes før aktiviteten er destoryed
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        //ALWAYS CALL THE SUPER METHOD - To be nice!
-        super.onSaveInstanceState(outState);
+         super.onSaveInstanceState(outState);
 
-		/* Here we put code now to save the state */
-        //outState.putParcelableArrayList("SavedBag",bag); //Ikke nødvendigt, da data fra DB.
+		/* Kode til, at gemme nuværende stadie */
+        //outState.putParcelableArrayList("SavedBag",bag); //Ikke nødvendigt nu, da data fra DB.
 
     }
 
@@ -314,7 +328,69 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
     }
 
     public void onClickBought(View view){
-      /*  ListView selected = (ListView)findViewById(R.id.list);
+        ListView selected = (ListView)findViewById(R.id.list); //Laver reference til, ListViewet fra XML filen.
+        final Map<String, Product> bagBackUp = new HashMap<>(); //Laver array til backup
+
+        final View parent = findViewById(R.id.layout); //Finder parent layout
+        int count = selected.getCount();  //Antallet af items i ListViewet
+
+        //Der findes og gemmes alle de produktpositioner der er valgt af brugeren.
+        SparseBooleanArray checkedItemPositions = selected.getCheckedItemPositions();
+
+        for (int i = 0;i < count;i++){
+
+            //Tjekker om der findes et item på positionen der er nået til.
+            if(checkedItemPositions.get(i)) {
+
+                //Sletter det produkt der er nået til, af de produkter brugere har markeret til slettning.
+                getMyAdapter().getRef(i).setValue(null);
+
+                //Tilføjer slettet til backup Map
+                bagBackUp.put(adapter.getRef(i).getKey(), (Product)selected.getItemAtPosition(i));
+
+                //Tilføjelse til tidligere backup arrayliste
+                //slettet.add((Product)selected.getItemAtPosition(i));
+            }
+        }
+
+        listView.clearChoices(); //Sørger for, at valgte glemmes
+        getMyAdapter().notifyDataSetChanged(); //Giver besked på ændringer i data
+
+        Snackbar snackbar = Snackbar
+                .make(parent, "Changes saved", Snackbar.LENGTH_LONG)
+                .setAction("UNDO", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+
+                        //Genskaber data
+                        for(String key:bagBackUp.keySet()){
+                            ref.child(key).setValue(bagBackUp.get(key));
+                        }
+
+                        getMyAdapter().notifyDataSetChanged(); //Giver besked på ændring
+
+                        //Fortæller brugeren, at data er restored
+                        Snackbar snackbar = Snackbar.make(parent, "Old bag restored!", Snackbar.LENGTH_SHORT);
+                        snackbar.show();
+
+
+                        //Kode der var brugt før til, at genskabe data
+                            //getMyAdapter().clear(); //Fjerner alt fra bag
+                            //bag.addAll(bagBackUp); //Tilføjer de elementer der var før sletning
+                    }
+                });
+
+        snackbar.show(); //Gør snackbar synlig
+
+        /**   Tidligere arbejde   */
+        /**Context context = getApplicationContext();
+         CharSequence text =  "You bought: " + (count-selected.getCount()) +" items." + Arrays.toString(slettet.toArray());
+         int duration = Toast.LENGTH_LONG;
+
+         Toast toast = Toast.makeText(context, text, duration);
+         toast.show(); */
+
+        /*  ListView selected = (ListView)findViewById(R.id.list);
         ArrayList<Product> slettet = new ArrayList();
 
         final ArrayList<Product> bagBackUp = new ArrayList<>(); //Laver array til backup
@@ -356,92 +432,47 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                 });
 
         snackbar.show();*/
-
-
-        ListView selected = (ListView)findViewById(R.id.list);
-        final Map<String, Product> bagBackUp = new HashMap<>(); //Laver array til backup
-
-        final View parent = findViewById(R.id.layout); //Finder parent layout
-        int count = selected.getCount();  //number of my ListView items
-
-        SparseBooleanArray checkedItemPositions = selected.getCheckedItemPositions();
-
-        for (int i = 0;i < count;i++){
-            if(checkedItemPositions.get(i)) {
-                //slettet.add((Product)selected.getItemAtPosition(i));
-                getMyAdapter().getRef(i).setValue(null);
-                bagBackUp.put(adapter.getRef(i).getKey(), (Product)selected.getItemAtPosition(i));
-            }
-        }
-
-        listView.clearChoices();
-        getMyAdapter().notifyDataSetChanged();
-
-        Snackbar snackbar = Snackbar
-                .make(parent, "Changes saved", Snackbar.LENGTH_LONG)
-                .setAction("UNDO", new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-
-                        //This code will ONLY be executed in case that
-                        //getMyAdapter().clear(); //Fjerner alt fra bag
-                        //bag.addAll(bagBackUp); //Tilføjer de elementer der var før sletning
-
-                        for(String key:bagBackUp.keySet()){
-                            ref.child(key).setValue(bagBackUp.get(key));
-                        }
-
-                        getMyAdapter().notifyDataSetChanged(); //Giver besked på ændring
-
-
-                        //Show the user we have restored the name - but here
-                        //on this snackbar there is NO UNDO - so no SetAction method is called
-                        //if you wanted, you could include a REDO on the second action button
-                        //for instance.
-                        Snackbar snackbar = Snackbar.make(parent, "Old bag restored!", Snackbar.LENGTH_SHORT);
-                        snackbar.show();
-                    }
-                });
-
-        snackbar.show();
-
-        /**Context context = getApplicationContext();
-         CharSequence text =  "You bought: " + (count-selected.getCount()) +" items." + Arrays.toString(slettet.toArray());
-         int duration = Toast.LENGTH_LONG;
-
-         Toast toast = Toast.makeText(context, text, duration);
-         toast.show(); */
     }
     public void onClickClearCart(View view){
-        dialog = new DeleteDialogFragment();
+        dialog = new DeleteDialogFragment(); //Laver ny dialog objekt
 
-        //Here we show the dialog
-        //The tag "MyFragement" is not important for us.
+        //Viser slette dialogen
         dialog.show(getFragmentManager(), "MyFragment");
-
     }
     @Override
     public void onPositiveClicked() {
-       // getMyAdapter().clear();
 
         ref.removeValue(); //Fjerner alle items fra database
         listView.clearChoices();
-        getMyAdapter().notifyDataSetChanged();
+        getMyAdapter().notifyDataSetChanged(); //Giver besked om, at data har ændret sig.
 
+
+        //Laver toast, så brugeren ved, at alle items er slettet.
         Context context = getApplicationContext();
         CharSequence text =  "Shopping cart cleared";
         int duration = Toast.LENGTH_LONG;
 
         Toast toast = Toast.makeText(context, text, duration);
         toast.show();
+
+        // getMyAdapter().clear(); //Fjener alle items førhen
     }
 
 
+
+    /** Get adapter */
+    public FirebaseListAdapter getMyAdapter()
+    {
+        return adapter;
+    }
+
+    /** Beregner om, den angive string kan laves om til et hel tal. */
     boolean isInt(String s)
     {
         Boolean res = false;
 
-        try { Integer.parseInt(s);
+        try {
+              Integer.parseInt(s);
               res = true;
             }
         catch(NumberFormatException er)
@@ -460,7 +491,8 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 
             File photoFile = null;
             try {
-                photoFile = createImageFile(); //Laver den fil, som billedet skal gemmes i.
+                //Laver den fil, som billedet skal gemmes i.
+                photoFile = createImageFile();
             }
             catch (IOException ex)
             {
@@ -501,7 +533,7 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                 storageDir      /* directory */
         );
 
-        // Save a file: path for use with ACTION_VIEW intents
+        //Sti som skal bruges til, at gemme det billede der tages med kamera
         mCurrentPhotoPath = image.getAbsolutePath();
         return image;
     }
@@ -527,26 +559,30 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 //Gør intet, da dialogen bare skal fjernes.
+
+                Toast toast = Toast.makeText(context, "Se billedet her: " + mCurrentPhotoPath, Toast.LENGTH_LONG);
+                toast.show();
+
             }
         }).setNegativeButton("Take new", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                PhotoIntent(); //Går brugeren kan tage et nyt billede
+                PhotoIntent(); //Gør brugeren kan tage et nyt billede
             }
         });
 
         AlertDialog dialog = builder.create(); //Bygger en dialog baseret på ovenstående settings.
         dialog.setTitle("Your photo"); //Sætter dialogens titel
 
-        //disse to linjer laver et view, baseret på activity_image_result xml filen.
+        //disse to linjer laver et view, baseret på activity_image_result.xml filen.
         LayoutInflater inflater = getLayoutInflater();
         View dialogLayout = inflater.inflate(R.layout.activity_image_result, null); //
 
         ImageView imageView  = (ImageView) dialogLayout.findViewById(R.id.imageView); //Finder ImageView i ovenstående layout
         imageView.setImageBitmap(imageBitmap); //Sætter billedet til, det der er givet fra kamera,
-        //hvilket er det metoden tager som parameter.
+                                               //hvilket er det metoden tager som parameter.
 
-        dialog.setView(dialogLayout); //Giver dialog det view, som er lavet får.
+        dialog.setView(dialogLayout); //Giver dialog det view, som er lavet før.
         dialog.show(); //Viser dialog
     }
 }
