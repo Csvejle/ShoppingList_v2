@@ -16,6 +16,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Html;
+import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -31,6 +32,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.firebase.ui.database.FirebaseListAdapter;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -51,6 +54,10 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
     DatabaseReference ref; //Database reference
 
     FirebaseListAdapter<Product> adapter; //Firebaseadapter
+
+    private FirebaseAuth mAuth;
+    FirebaseUser user;
+
     ListView listView; //
 
     //ArrayAdapter<Product> adapter; //Tidligere adapter, da det var en Arrayliste, der var database
@@ -60,6 +67,8 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
     static Context context;
 
     //Identifier til intents
+
+    static final int REQUEST_SIGNIN = 10;
     static final int REQUEST_TAKE_PHOTO = 1;
     static final int REQUEST_SETTINGS = 2;
 
@@ -69,14 +78,28 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        //Sætter context, hvilket er denne aktivitet
-        this.context = this;
-
         //Sætter layout
         setContentView(R.layout.activity_main);
 
-        //Laver reference til firbase database
-        ref = FirebaseDatabase.getInstance().getReference().child("products");
+
+        //Sætter context, hvilket er denne aktivitet
+        this.context = this;
+
+        this.mAuth = FirebaseAuth.getInstance();
+        this.user = mAuth.getCurrentUser();
+
+
+        /**/
+        isSignedIn();
+
+        if(user != null) {
+            //Laver reference til firbase database
+            ref = FirebaseDatabase.getInstance().getReference().child(mAuth.getCurrentUser().getUid()).child("products");
+
+        }
+        else {
+            ref = FirebaseDatabase.getInstance().getReference().child("None").child("products");
+        }
 
         //Hvis brugeren ønsker notificationer fortælles der,
         //hvor mange dage til eller siden, der er shopping dag.
@@ -247,6 +270,15 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         });
     }
 
+    private void isSignedIn() {
+        if (user != null) {
+            Log.d("User", "success");
+        } else {
+            Intent intentLogin = new Intent(context,LoginActivity.class);
+            startActivity(intentLogin);
+        }
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -283,6 +315,11 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                 break;
             case R.id.takePhoto:
                 PhotoIntent();
+                break;
+            case R.id.signout:
+                mAuth.signOut();
+                user = mAuth.getCurrentUser();
+                isSignedIn();
                 break;
             case R.id.shareShoppingList:
                 Product p;
@@ -328,6 +365,12 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                 ImageDialog(imageBitmap);
             }
         }
+        else if(requestCode == REQUEST_SIGNIN &&  resultCode == RESULT_OK) {
+            isSignedIn();
+            Toast toast = Toast.makeText(context, user.getEmail(), Toast.LENGTH_LONG);
+            toast.show();
+        }
+
         super.onActivityResult(requestCode, resultCode, data);
     }
 
