@@ -10,10 +10,13 @@ public class FirebaseIDService extends FirebaseInstanceIdService {
 
     @Override
     public void onTokenRefresh() {
-        // Get updated InstanceID token.
+        //Får InstanceID token.
         String refreshedToken = FirebaseInstanceId.getInstance().getToken();
+
+        //Usskriver token
         Log.d(TAG, "Refreshed token: " + refreshedToken);
 
+        //Kald til nedenstående metode
         sendRegistrationToServer(refreshedToken);
     }
 
@@ -23,9 +26,9 @@ public class FirebaseIDService extends FirebaseInstanceIdService {
      * Modify this method to associate the user's FCM InstanceID token with any server-side account
      * maintained by your application.
      *
-     * @param token The new token.
+     * @param token den nye token.
      */
     private void sendRegistrationToServer(String token) {
-        // Add custom implementation, as needed.
+        //Brug af den nye token, hvis der er behov for det, hvilket vi ikke har.
     }
 }

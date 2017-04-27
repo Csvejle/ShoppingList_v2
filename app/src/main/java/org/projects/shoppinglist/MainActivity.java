@@ -82,14 +82,20 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         setContentView(R.layout.activity_main);
 
 
+        //For brug af firebase Crash rapport
+        //Udkommenter nedenstående, da ikke ønsker det skal medtages hver gang,
+        //at aktiviteten bruges.
+        //FirebaseCrash.log("Creating the APP");
+        //FirebaseCrash.report(new Exception("Logging"));
+
         //Sætter context, hvilket er denne aktivitet
         this.context = this;
 
+        //Sætter variabler ift. login
         this.mAuth = FirebaseAuth.getInstance();
         this.user = mAuth.getCurrentUser();
 
-
-        /**/
+        // Tjekker om brugeren er logget ind.
         isSignedIn();
 
         if(user != null) {
@@ -270,10 +276,15 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         });
     }
 
+    /***
+     * Finder ud af, om brugeren er logget ind, hvis ikke gås til den aktivitet der håndter login.
+    **/
     private void isSignedIn() {
         if (user != null) {
+            //Skriver i loggen brugeren er logget ind.
             Log.d("User", "success");
         } else {
+            //Starter Login aktivitet
             Intent intentLogin = new Intent(context,LoginActivity.class);
             startActivity(intentLogin);
         }
@@ -304,6 +315,10 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
             case R.id.action_settings:
                 Intent intent = new Intent(this,SettingsActivity.class);
                 startActivityForResult(intent,REQUEST_SETTINGS);
+                break;
+            case R.id.profile:
+                Intent intentLogin = new Intent(this,LoginActivity.class);
+                startActivity(intentLogin);
                 break;
             case R.id.clearCartMenu:
                 dialog = new DeleteDialogFragment();

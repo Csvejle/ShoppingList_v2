@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">ShoppingList</string>
-
     <string name="defaultname">Your name</string>
+    <string name="Profile">Profile</string>
     
     <!-- Slet dialog tekster-->
     <string name="confirmation">Confirmation</string>

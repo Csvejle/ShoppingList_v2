@@ -16,6 +16,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.crash.FirebaseCrash;
 
 public class LoginActivity extends BaseActivity implements
         View.OnClickListener {
@@ -26,84 +27,90 @@ public class LoginActivity extends BaseActivity implements
     private TextView mDetailTextView;
     private EditText mEmailField;
     private EditText mPasswordField;
-
-    // [START declare_auth]
     private FirebaseAuth mAuth;
-    // [END declare_auth]
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_emailpassword);
 
-        // Views
+        //Views
         mStatusTextView = (TextView) findViewById(R.id.status);
         mDetailTextView = (TextView) findViewById(R.id.detail);
         mEmailField = (EditText) findViewById(R.id.field_email);
         mPasswordField = (EditText) findViewById(R.id.field_password);
 
-        // Buttons
+        //Buttons
         findViewById(R.id.email_sign_in_button).setOnClickListener(this);
         findViewById(R.id.email_create_account_button).setOnClickListener(this);
         findViewById(R.id.sign_out_button).setOnClickListener(this);
         findViewById(R.id.verify_email_button).setOnClickListener(this);
 
-        // [START initialize_auth]
+        //Variable der bruges vedr log ind og bruger
         mAuth = FirebaseAuth.getInstance();
-        // [END initialize_auth]
     }
 
-    // [START on_start_check_user]
     @Override
     public void onStart() {
         super.onStart();
-        // Check if user is signed in (non-null) and update UI accordingly.
+        //Tjekker om brugeren er logget ind, og opdater UI ift.
         FirebaseUser currentUser = mAuth.getCurrentUser();
         updateUI(currentUser);
     }
-    // [END on_start_check_user]
 
-    private void createAccount(String email, String password) {
-        Log.d(TAG, "createAccount:" + email);
+    private void createAccount(final String email, final String password) {
+        //Sikre formular er ok
         if (!validateForm()) {
             return;
         }
 
+        //Viser procesbar
         showProgressDialog();
 
-
-        // [START create_user_with_email]
-        mAuth.createUserWithEmailAndPassword(email, password)
+        try {
+            //Opretter bruger med det angivne
+            mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                     @Override
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Log.d(TAG, "createUserWithEmail:success");
+
+                            //Gemmer info om brugeren der er logget ind, og opdater GUI, sådan brugeren ser profil.
+                            //Brugeren der er logget ind vil være den ny oprettede
                             FirebaseUser user = mAuth.getCurrentUser();
                             updateUI(user);
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            Log.w(TAG, "createUserWithEmail:failure", task.getException());
-                            Toast.makeText(LoginActivity.this, "Authentication failed.",
+                        }
+                        else {
+                            //Laver fejl, hvis brugeren ikke kan lave bruger
+                            FirebaseCrash.log("Fejl i oprettelse af bruger: Email; " + email  +" Password; " + password);
+                            FirebaseCrash.report(new Exception(task.getException()));
+
+                            //Opdater UI ift. hvad der er sket, og giver bruger besked på, oprettelse ikke løkkes.
+                            Toast.makeText(LoginActivity.this, "Enter an unused email and a password with length >= 6.",
                                     Toast.LENGTH_SHORT).show();
                             updateUI(null);
                         }
 
-                        // [START_EXCLUDE]
+                        //Skjuler procesbar
                         hideProgressDialog();
-                        // [END_EXCLUDE]
                     }
                 });
-        // [END create_user_with_email]*/
+
+            }
+            catch (Exception ex){
+                FirebaseCrash.log("Uventet fejl i oprrettelse af bruger: Email; " + email  +" Password; " + password);
+                FirebaseCrash.report(new Exception(ex.toString()));
+            }
     }
 
-    private void signIn(final String email, String password)
+    private void signIn(final String email, final String password)
     {
-        Log.d(TAG, "signIn:" + email);
+        //Sikre formular er ok
         if (!validateForm()) {
             return;
         }
+
+        //Viser procesbar
         showProgressDialog();
 
         try {
@@ -113,33 +120,40 @@ public class LoginActivity extends BaseActivity implements
                         public void onComplete(@NonNull Task<AuthResult> task) {
                             boolean ok = task.isSuccessful();
                             if (ok) {
-                                // Sign in success, update UI with the signed-in user's information
+                                //Ok log ind
+
+                                //Gemmer info om brugeren der er logget ind, og opdater GUI, sådan brugeren ser profil.
                                 Log.d(TAG, "signInWithEmail:success");
                                 FirebaseUser user = mAuth.getCurrentUser();
                                 updateUI(user);
 
+                                //Gemmer mailen, som brugeren er logget ind med, som værdi til "name" præferencen
                                 SharedPreferences pref  = PreferenceManager.getDefaultSharedPreferences(LoginActivity.this);
                                 SharedPreferences.Editor editor = pref.edit();
                                 editor.putString("name", email);
                                 editor.commit();
                             }
                             else {
-                                // If sign in fails, display a message to the user.
-                                Log.w(TAG, "signInWithEmail:failure", task.getException());
-                                Toast.makeText(LoginActivity.this, "Authentication failed.",
+
+                                //Laver fejl, hvis brugeren ikke kan lave bruger
+                                FirebaseCrash.log("Fejl i login af bruger: Email; " + email  +" Password; " + password);
+                                FirebaseCrash.report(new Exception(task.getException()));
+
+                                //Opdater UI ift. hvad der er sket, og giver bruger besked på, login ikke løkkes.
+                                Toast.makeText(LoginActivity.this, "We couldn't sign you in -> sorry. :( ",
                                         Toast.LENGTH_SHORT).show();
                                 updateUI(null);
                             }
 
+                            //Skjuler procesbar
                             hideProgressDialog();
                         }
                     });
-
         }
         catch (Exception ex){
-            Log.d(TAG, "signInWithEmail:error");
+            FirebaseCrash.log("Uventet fejl i login af bruger: Email; " + email  +" Password; " + password);
+            FirebaseCrash.report(new Exception(ex.toString()));
         }
-
     }
 
     private void signOut() {
@@ -203,9 +217,13 @@ public class LoginActivity extends BaseActivity implements
     private void updateUI(FirebaseUser user) {
         hideProgressDialog();
         if (user != null) {
-            mStatusTextView.setText(R.string.emailpassword_status_fmt + " " +
-                    user.getEmail() + " " + user.isEmailVerified());
-            mDetailTextView.setText(R.string.firebase_status_fmt + " " + user.getUid());
+            String verified = "Yes";
+            if(!user.isEmailVerified()) {
+                verified = "No - click the button below to be it.";
+            }
+
+            mStatusTextView.setText("Email: " + user.getEmail() + " \nAre you verified ? " + verified);
+
 
             findViewById(R.id.email_password_buttons).setVisibility(View.GONE);
             findViewById(R.id.email_password_fields).setVisibility(View.GONE);
