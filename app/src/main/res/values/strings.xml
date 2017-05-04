@@ -61,10 +61,11 @@
 
     <string name="sign_in">Sign in</string>
     <string name="create_account">Create account</string>
-
+    <string name="GotoShopList">To list</string>
     <string name="sign_out">Sign out</string>
-    <string name="verify_email">Verify email</string>
+    <string name="verify_email">Verify</string>
     <string name="detail">Sign in or make an account to manage your shopping list.\nHope you enjoy and have a happy shopping day. :)</string>
+
 
     <string name="emailpassword_title_text">Sign in or make account</string>
     <string name="loading">Loading....</string>

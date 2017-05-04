@@ -10,12 +10,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.Html;
 import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
@@ -32,10 +32,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.firebase.ui.database.FirebaseListAdapter;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,7 +56,7 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 {
 
     DatabaseReference ref; //Database reference
-
+    FirebaseRemoteConfig firebaseRemoteConfig = FirebaseRemoteConfig.getInstance(); //Remote config instans
     FirebaseListAdapter<Product> adapter; //Firebaseadapter
 
     private FirebaseAuth mAuth;
@@ -67,12 +71,29 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
     static Context context;
 
     //Identifier til intents
-
     static final int REQUEST_SIGNIN = 10;
     static final int REQUEST_TAKE_PHOTO = 1;
     static final int REQUEST_SETTINGS = 2;
 
     String mCurrentPhotoPath; //Billedesti
+
+    private void RemoteConfigTask()
+    {
+        Task<Void> myTask = firebaseRemoteConfig.fetch(1);
+        myTask.addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if (task.isSuccessful())
+                {
+                    firebaseRemoteConfig.activateFetched();
+                    String name = firebaseRemoteConfig.getString("app_name");
+                    getSupportActionBar().setTitle(name);
+                    Log.d("Fkett: ", "New: " + name);
+                } else
+                    Log.d("ERROR", "Task not succesfull" + task.getException());
+            }
+        });
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +102,20 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         //Sætter layout
         setContentView(R.layout.activity_main);
 
+        //RemoteConfig defaults
+        Map<String,Object> defaults = new HashMap<>();
+        defaults.put("app_name", getResources().getString(R.string.app_name));
+        firebaseRemoteConfig.setDefaults(defaults);
+
+
+        FirebaseRemoteConfigSettings configSettings =
+                new FirebaseRemoteConfigSettings.Builder()
+                        .setDeveloperModeEnabled(true) //set to false when releasing
+                .build();
+        firebaseRemoteConfig.setConfigSettings(configSettings);
+
+        //Opdatering
+        RemoteConfigTask();
 
         //For brug af firebase Crash rapport
         //Udkommenter nedenstående, da ikke ønsker det skal medtages hver gang,
@@ -94,6 +129,8 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         //Sætter variabler ift. login
         this.mAuth = FirebaseAuth.getInstance();
         this.user = mAuth.getCurrentUser();
+
+
 
         // Tjekker om brugeren er logget ind.
         isSignedIn();
@@ -279,16 +316,6 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
     /***
      * Finder ud af, om brugeren er logget ind, hvis ikke gås til den aktivitet der håndter login.
     **/
-    private void isSignedIn() {
-        if (user != null) {
-            //Skriver i loggen brugeren er logget ind.
-            Log.d("User", "success");
-        } else {
-            //Starter Login aktivitet
-            Intent intentLogin = new Intent(context,LoginActivity.class);
-            startActivity(intentLogin);
-        }
-    }
 
     @Override
     protected void onDestroy() {
@@ -343,7 +370,7 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                 for(int i = 0; i<getMyAdapter().getCount(); i++) {
                     p = getItem(i);
                     if(p != null) {
-                        itemsTekst += " - " + p.toString() + "<br/>";
+                        itemsTekst += " - " + p.toString() + "\n";
                     }
                 }
 
@@ -353,7 +380,7 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
                 sendIntent.putExtra(Intent.EXTRA_SUBJECT, "Shoppinglist");
-                sendIntent.putExtra(Intent.EXTRA_TEXT, Html.fromHtml("<html><body><h1>My shoppinglist</h1><ul>" + itemsTekst + "</ul></body></html>"));
+                sendIntent.putExtra(Intent.EXTRA_TEXT, "My shoppinglist \n" + itemsTekst);
                 sendIntent.setType("text/plain"); //fortæller, at det der sendes skal være plan tekst
                 startActivity(sendIntent);
                 break;
@@ -538,7 +565,6 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
     }
 
 
-
     /** Get adapter */
     public FirebaseListAdapter getMyAdapter()
     {
@@ -663,5 +689,16 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 
         dialog.setView(dialogLayout); //Giver dialog det view, som er lavet før.
         dialog.show(); //Viser dialog
+    }
+
+    private void isSignedIn() {
+        if (user != null) {
+            //Skriver i loggen brugeren er logget ind.
+            Log.d("User", "success");
+        } else {
+            //Starter Login aktivitet
+            Intent intentLogin = new Intent(context,LoginActivity.class);
+            startActivity(intentLogin);
+        }
     }
 }

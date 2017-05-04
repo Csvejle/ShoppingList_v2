@@ -1,5 +1,6 @@
 package org.projects.shoppinglist;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -27,6 +28,7 @@ public class LoginActivity extends BaseActivity implements
     private TextView mDetailTextView;
     private EditText mEmailField;
     private EditText mPasswordField;
+    private TextView mTitleTextView;
     private FirebaseAuth mAuth;
 
     @Override
@@ -39,12 +41,14 @@ public class LoginActivity extends BaseActivity implements
         mDetailTextView = (TextView) findViewById(R.id.detail);
         mEmailField = (EditText) findViewById(R.id.field_email);
         mPasswordField = (EditText) findViewById(R.id.field_password);
+        mTitleTextView = (TextView) findViewById(R.id.title_text);
 
         //Buttons
         findViewById(R.id.email_sign_in_button).setOnClickListener(this);
         findViewById(R.id.email_create_account_button).setOnClickListener(this);
         findViewById(R.id.sign_out_button).setOnClickListener(this);
         findViewById(R.id.verify_email_button).setOnClickListener(this);
+        findViewById(R.id.shoppinglistbtn).setOnClickListener(this);
 
         //Variable der bruges vedr log ind og bruger
         mAuth = FirebaseAuth.getInstance();
@@ -114,6 +118,7 @@ public class LoginActivity extends BaseActivity implements
         showProgressDialog();
 
         try {
+            //Logger den bruger ind, som matcher angivet mail og password
             mAuth.signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener(LoginActivity.this, new OnCompleteListener<AuthResult>() {
                         @Override
@@ -132,6 +137,8 @@ public class LoginActivity extends BaseActivity implements
                                 SharedPreferences.Editor editor = pref.edit();
                                 editor.putString("name", email);
                                 editor.commit();
+
+                                handleLayout(user);
                             }
                             else {
 
@@ -162,36 +169,60 @@ public class LoginActivity extends BaseActivity implements
     }
 
     private void sendEmailVerification() {
-        // Disable button
+        // Disable knappen, da man kun skulle kun gøre dette en gang.
         findViewById(R.id.verify_email_button).setEnabled(false);
 
-        // Send verification email
-        // [START send_email_verification]
+        //Finder brugeren der er logget ind.
         final FirebaseUser user = mAuth.getCurrentUser();
-        user.sendEmailVerification()
-                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        // [START_EXCLUDE]
-                        // Re-enable button
-                        findViewById(R.id.verify_email_button).setEnabled(true);
 
-                        if (task.isSuccessful()) {
-                            Toast.makeText(LoginActivity.this,
-                                    "Verification email sent to " + user.getEmail(),
-                                    Toast.LENGTH_SHORT).show();
-                        } else {
-                            Log.e(TAG, "sendEmailVerification", task.getException());
-                            Toast.makeText(LoginActivity.this,
-                                    "Failed to send verification email.",
-                                    Toast.LENGTH_SHORT).show();
+        if(user != null) {
+            try {
+            // Sender verification email
+            user.sendEmailVerification()
+                    .addOnCompleteListener(this, new OnCompleteListener<Void>() {
+                        @Override
+                        public void onComplete(@NonNull Task<Void> task) {
+                            findViewById(R.id.verify_email_button).setEnabled(true);
+
+                            //Ok sending
+                            if (task.isSuccessful()) {
+                                Toast.makeText(LoginActivity.this,
+                                        "Verification email sent to " + user.getEmail(),
+                                        Toast.LENGTH_SHORT).show();
+
+                            }
+                            else {
+                                //Ikke ok sending
+                                Log.e(TAG, "sendEmailVerification", task.getException());
+                                Toast.makeText(LoginActivity.this,
+                                        "Failed to send verification email.",
+                                        Toast.LENGTH_SHORT).show();
+                            }
                         }
-                        // [END_EXCLUDE]
-                    }
-                });
-        // [END send_email_verification]
+                    });
+            }
+            catch (Exception ex){
+                FirebaseCrash.log("Uventet fejl i sending af verification mail til " + user.getEmail());
+                FirebaseCrash.report(new Exception(ex.toString()));
+            }
+        }
+        else {
+            Toast.makeText(LoginActivity.this,
+                    "Need to be signed in to do this.",
+                    Toast.LENGTH_SHORT).show();
+        }
     }
 
+    private void handleLayout(FirebaseUser user) {
+        if (user != null) {
+            //Går til shopping listen
+            Intent intentLogin = new Intent(LoginActivity.this, MainActivity.class);
+            startActivity(intentLogin);
+           // finish();
+        }
+    }
+
+    /** Tjekker input */
     private boolean validateForm() {
         boolean valid = true;
 
@@ -214,6 +245,7 @@ public class LoginActivity extends BaseActivity implements
         return valid;
     }
 
+    /** Opdater UI alt efter, om brugeren er i profil eller login/lav bruger tilstand.  */
     private void updateUI(FirebaseUser user) {
         hideProgressDialog();
         if (user != null) {
@@ -224,29 +256,30 @@ public class LoginActivity extends BaseActivity implements
 
             mStatusTextView.setText("Email: " + user.getEmail() + " \nAre you verified ? " + verified);
 
+            mTitleTextView.setText("Profile");
 
             findViewById(R.id.email_password_buttons).setVisibility(View.GONE);
             findViewById(R.id.email_password_fields).setVisibility(View.GONE);
             findViewById(R.id.signed_in_buttons).setVisibility(View.VISIBLE);
 
             findViewById(R.id.verify_email_button).setEnabled(!user.isEmailVerified());
-
-           // Intent intentLogin = new Intent(LoginActivity.this, MainActivity.class);
-            //startActivity(intentLogin);
-
-        } else {
+        }
+        else {
             mStatusTextView.setText(R.string.detail);
             mDetailTextView.setText(null);
 
+            mTitleTextView.setText(R.string.emailpassword_title_text);
             findViewById(R.id.email_password_buttons).setVisibility(View.VISIBLE);
             findViewById(R.id.email_password_fields).setVisibility(View.VISIBLE);
             findViewById(R.id.signed_in_buttons).setVisibility(View.GONE);
         }
     }
 
+    /** Håndter knap click events  */
     @Override
     public void onClick(View v) {
         int i = v.getId();
+        Log.d("ERROR", ""+i);
         if (i == R.id.email_create_account_button) {
             createAccount(mEmailField.getText().toString(), mPasswordField.getText().toString());
         } else if (i == R.id.email_sign_in_button) {
@@ -255,6 +288,18 @@ public class LoginActivity extends BaseActivity implements
             signOut();
         } else if (i == R.id.verify_email_button) {
             sendEmailVerification();
+        } else if(i == R.id.shoppinglistbtn) {
+            FirebaseUser user = mAuth.getCurrentUser();
+            Log.d("ERROR", "" +user.getEmail());
+            handleLayout(user);
         }
     }
+
+    /*
+    @Override
+    public void finish() {
+        Intent data = new Intent();
+        setResult(RESULT_OK, data);
+        super.finish();
+    }*/
 }
