@@ -44,7 +44,6 @@ import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -77,23 +76,7 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 
     String mCurrentPhotoPath; //Billedesti
 
-    private void RemoteConfigTask()
-    {
-        Task<Void> myTask = firebaseRemoteConfig.fetch(1);
-        myTask.addOnCompleteListener(new OnCompleteListener<Void>() {
-            @Override
-            public void onComplete(@NonNull Task<Void> task) {
-                if (task.isSuccessful())
-                {
-                    firebaseRemoteConfig.activateFetched();
-                    String name = firebaseRemoteConfig.getString("app_name");
-                    getSupportActionBar().setTitle(name);
-                    Log.d("Fkett: ", "New: " + name);
-                } else
-                    Log.d("ERROR", "Task not succesfull" + task.getException());
-            }
-        });
-    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,220 +85,122 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         //Sætter layout
         setContentView(R.layout.activity_main);
 
-        //RemoteConfig defaults
-        Map<String,Object> defaults = new HashMap<>();
-        defaults.put("app_name", getResources().getString(R.string.app_name));
-        firebaseRemoteConfig.setDefaults(defaults);
-
-
-        FirebaseRemoteConfigSettings configSettings =
-                new FirebaseRemoteConfigSettings.Builder()
-                        .setDeveloperModeEnabled(true) //set to false when releasing
-                .build();
-        firebaseRemoteConfig.setConfigSettings(configSettings);
-
-        //Opdatering
-        RemoteConfigTask();
-
-        //For brug af firebase Crash rapport
-        //Udkommenter nedenstående, da ikke ønsker det skal medtages hver gang,
-        //at aktiviteten bruges.
-        //FirebaseCrash.log("Creating the APP");
-        //FirebaseCrash.report(new Exception("Logging"));
+        //Sætter actionbar
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
         //Sætter context, hvilket er denne aktivitet
         this.context = this;
 
-        //Sætter variabler ift. login
-        this.mAuth = FirebaseAuth.getInstance();
-        this.user = mAuth.getCurrentUser();
+
+        //RemoteConfig
+        //RemoteConfig defaults
+            Map<String,Object> defaults = new HashMap<>();
+            defaults.put("app_name", getResources().getString(R.string.app_name));
+            firebaseRemoteConfig.setDefaults(defaults);
 
 
+            FirebaseRemoteConfigSettings configSettings =
+                        new FirebaseRemoteConfigSettings.Builder()
+                                .setDeveloperModeEnabled(true) //set to false when releasing
+                        .build();
+            firebaseRemoteConfig.setConfigSettings(configSettings);
 
-        // Tjekker om brugeren er logget ind.
-        isSignedIn();
+            //Opdatering baseret på RemoteConfig
+            RemoteConfigTask();
 
-        if(user != null) {
-            //Laver reference til firbase database
-            ref = FirebaseDatabase.getInstance().getReference().child(mAuth.getCurrentUser().getUid()).child("products");
+        //firebase Crash rapport
+            //For brug af firebase Crash rapport
+            //Udkommenter nedenstående, da ikke ønsker det skal medtages hver gang,
+            //at aktiviteten bruges.
+                //FirebaseCrash.log("Creating the APP");
+                //FirebaseCrash.report(new Exception("Logging"));
 
-        }
-        else {
-            ref = FirebaseDatabase.getInstance().getReference().child("None").child("products");
-        }
+
+        //Login
+            //Sætter variabler ift. login
+                this.mAuth = FirebaseAuth.getInstance();
+                this.user = mAuth.getCurrentUser();
+
+
+            // Tjekker om brugeren er logget ind.
+                isSignedIn();
+
+                if(user != null) {
+                    //Laver reference til firbase database
+                    ref = FirebaseDatabase.getInstance().getReference().child(mAuth.getCurrentUser().getUid()).child("products");
+
+                }
+                else {
+                    ref = FirebaseDatabase.getInstance().getReference().child("None").child("products");
+                }
+
+
+        //Data fra firebase
+            //Finder listview fra layout
+            listView = (ListView) findViewById(R.id.list);
+
+
+            //Laver FirebaseListAdapter adapter
+            adapter = new FirebaseListAdapter<Product>(this, Product.class, android.R.layout.simple_list_item_checked, ref) {
+                @Override
+                protected void populateView(View v, Product model, int position) {
+                    ((TextView)v.findViewById(android.R.id.text1)).setText(model.toString());
+                }
+            };
+
+            //sætter adapter på listviewet
+            listView.setAdapter(adapter);
+
+
+            //Fortæller at bruger skal have mulighed for, at vælge flere items i listen.
+            listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+
+
+        //Add knap og listener til
+            //Finder add knap fra layout
+            Button addButton = (Button) findViewById(R.id.addButton);
+
+            //Lavet klik event til knap
+            addButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    addBtnKode();
+                }
+            });
+
 
         //Hvis brugeren ønsker notificationer fortælles der,
         //hvor mange dage til eller siden, der er shopping dag.
         if(MyPreferenceFragment.wantNotifications(this)){
-
-            String message = "";
-
-            //Finder gemt dato
-            String saveddate =  MyPreferenceFragment.getDate(this);
-
-            //Laver Kalender med ovenstående dato
-            Calendar calSaved = Calendar.getInstance();
-            calSaved.set(DatePreference.getYear(saveddate), DatePreference.getMonth(saveddate)-1, DatePreference.getDate(saveddate));
-
-            //Før nuværende dato
-            Calendar calDateNow = Calendar.getInstance();
-
-            //Beregner forskel i millisekunder
-            long diffMillis= Math.abs(calDateNow.getTimeInMillis()-calSaved.getTimeInMillis());
-
-            //Laver ovenstående om til dage
-            long differenceInDays = TimeUnit.DAYS.convert(diffMillis, TimeUnit.MILLISECONDS);
-
-            //Laver passende besked
-            if(differenceInDays == 0){
-                message = "Remember it's shopping day today.";
-            }
-            else if(calDateNow.compareTo(calSaved) > 0){
-                message = "Sopping day for "+ differenceInDays + " day(s) ago.";
-            }
-            else {
-                message = "Sopping in "+ differenceInDays + " day(s).";
-            }
-
-            //Giver brugeren den lavede besked
-            Toast toast2 = Toast.makeText(context, message + " " + MyPreferenceFragment.getName(context), Toast.LENGTH_LONG);
-            toast2.show();
+            appNotifications();
         }
 
         //er der gemt noget, som skal bruges til, at genskabe tidligere stadie
-		if (savedInstanceState!=null)
+		/*if (savedInstanceState!=null)
 		{
-            ArrayList<Product> saved = savedInstanceState.getParcelableArrayList("SavedBag");
+            //ArrayList<Product> saved = savedInstanceState.getParcelableArrayList("SavedBag");
 
 			if (saved!=null)
             {
-                //bag = saved; //Ikke nødvendigt, da data fra DB.
+                bag = saved; //Ikke nødvendigt, da data fra DB.
             }
 		}
         else{
 
             //Tidligere tilføjelse af data, når der ikke er noget gemt i bag arraylisten
-            //bag.add(new Product("Bananas", 2));
-            //bag.add(new Product("Apples", 10));
-            //bag.add(new Product("Milk", 1));
-        }
+            bag.add(new Product("Bananas", 2));
+            bag.add(new Product("Apples", 10));
+            bag.add(new Product("Milk", 1));
+        }*/
 
 
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-
-        //Finder listview fra layout
-        listView = (ListView) findViewById(R.id.list);
-
-
-        //Laver FirebaseListAdapter adapter
-        adapter = new FirebaseListAdapter<Product>(this, Product.class, android.R.layout.simple_list_item_checked, ref) {
-            @Override
-            protected void populateView(View v, Product model, int position) {
-                ((TextView)v.findViewById(android.R.id.text1)).setText(model.toString());
-            }
-        };
 
         //Adapter før, hvor der er brugt en arrayliste (bag) til database
-            //adapter =  new ArrayAdapter<Product>(this, android.R.layout.simple_list_item_checked, bag);
-
-        //sætter adapter på listviewet
-        listView.setAdapter(adapter);
-
-
-        //Fortæller at bruger skal have mulighed for, at vælge flere items i listen.
-        listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
-
-        //Finder add knap fra layout
-        Button addButton = (Button) findViewById(R.id.addButton);
-
-        //Lavet klik event til knap
-        addButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final View parent = findViewById(R.id.layout); //Finder parent layout
-                String msg = ""; //Besked til bruger
-                Boolean ok = false; //Om oprettelsen er ok
-
-
-                // -- Validering af input -- //
-                EditText produktInput = (EditText) findViewById(R.id.txtProduktName);
-                String produktName = "";
-
-                EditText amountInput = (EditText) findViewById(R.id.txtQuantity);
-                String amount= "";
-
-                Spinner amoutList = (Spinner) findViewById(R.id.amoutList);
-
-                if(produktInput != null) {
-                    produktName = produktInput.getText().toString();
-                }
-                else {
-                    msg += "* Cannot find your produktName :(. *";
-                }
-
-                if(amountInput != null) {
-                    amount = amountInput.getText().toString();
-                }
-                else {
-                    msg += "* Cannot find your amount :(. *";
-                }
-
-                if(amount.isEmpty() || amount.length() == 0 || amount == null){
-
-                    if(amoutList != null) {
-                        amount = String.valueOf(amoutList.getSelectedItem()); //Finder den valgte quantity
-                    }
-                    else {
-                        msg += "* Cannot find your amount :(. *";
-                    }
-                }
-                // ------- //
-
-
-                if(!produktName.isEmpty() && isInt(amount) && produktName.length() > 0 && amount.length() > 0) {
-                    //Tilføjer nyt produkt
-                    ref.push().setValue(new Product(produktName, Integer.parseInt(amount)));
-
-                    //Fortæller der er sket ændringer i data
-                    getMyAdapter().notifyDataSetChanged();
-
-                    //Gør klar til, at brugeren kan tilføje et nyt produkt
-                    produktInput.getText().clear();
-                    amountInput.getText().clear();
-                    amoutList.setSelection(0);
-
-                    //Fortæller at produktet er oprettet
-                    ok = true;
-
-                    //Fjerner keyboard efter klik på knap
-                    InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                    imm.hideSoftInputFromWindow(parent.getWindowToken(), 0);
-
-
-                    //Tilføjelse af nyt produkt før
-                    //bag.add(new Product(produktName, Integer.parseInt(amount)));
-                }
-                else { msg = "You have not typed both an amount and productname."; }
-
-                if(!ok) {
-
-                    //Giver besked på, at der ikke er fuldt det nødvendige data til, at tilføje et nyt produkt
-                    Context context = getApplicationContext();
-                    CharSequence text = msg;
-                    int duration = Toast.LENGTH_LONG;
-
-                    Toast toast = Toast.makeText(context, text, duration);
-                    toast.show();
-                }
-
-            }
-        });
+        //adapter =  new ArrayAdapter<Product>(this, android.R.layout.simple_list_item_checked, bag);
     }
 
-    /***
-     * Finder ud af, om brugeren er logget ind, hvis ikke gås til den aktivitet der håndter login.
-    **/
+
 
     @Override
     protected void onDestroy() {
@@ -691,6 +576,10 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         dialog.show(); //Viser dialog
     }
 
+
+    /***
+     * Finder ud af, om brugeren er logget ind, hvis ikke gås til den aktivitet der håndter login.
+    **/
     private void isSignedIn() {
         if (user != null) {
             //Skriver i loggen brugeren er logget ind.
@@ -700,5 +589,136 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
             Intent intentLogin = new Intent(context,LoginActivity.class);
             startActivity(intentLogin);
         }
+    }
+
+    private void RemoteConfigTask()
+    {
+        Task<Void> myTask = firebaseRemoteConfig.fetch(1);
+        myTask.addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if (task.isSuccessful())
+                {
+                    firebaseRemoteConfig.activateFetched();
+                    String name = firebaseRemoteConfig.getString("app_name");
+                    getSupportActionBar().setTitle(name);
+                    Log.d("Fkett: ", "New: " + name);
+                } else
+                    Log.d("ERROR", "Task not succesfull" + task.getException());
+            }
+        });
+    }
+
+    private void addBtnKode(){
+        final View parent = findViewById(R.id.layout); //Finder parent layout
+        String msg = ""; //Besked til bruger
+        Boolean ok = false; //Om oprettelsen er ok
+
+
+        // -- Validering af input -- //
+        EditText produktInput = (EditText) findViewById(R.id.txtProduktName);
+        String produktName = "";
+
+        EditText amountInput = (EditText) findViewById(R.id.txtQuantity);
+        String amount= "";
+
+        Spinner amoutList = (Spinner) findViewById(R.id.amoutList);
+
+        if(produktInput != null) {
+            produktName = produktInput.getText().toString();
+        }
+        else {
+            msg += "* Cannot find your produktName :(. *";
+        }
+
+        if(amountInput != null) {
+            amount = amountInput.getText().toString();
+        }
+        else {
+            msg += "* Cannot find your amount :(. *";
+        }
+
+        if(amount.isEmpty() || amount.length() == 0 || amount == null){
+
+            if(amoutList != null) {
+                amount = String.valueOf(amoutList.getSelectedItem()); //Finder den valgte quantity
+            }
+            else {
+                msg += "* Cannot find your amount :(. *";
+            }
+        }
+        // ------- //
+
+
+        if(!produktName.isEmpty() && isInt(amount) && produktName.length() > 0 && amount.length() > 0) {
+            //Tilføjer nyt produkt
+            ref.push().setValue(new Product(produktName, Integer.parseInt(amount)));
+
+            //Fortæller der er sket ændringer i data
+            getMyAdapter().notifyDataSetChanged();
+
+            //Gør klar til, at brugeren kan tilføje et nyt produkt
+            produktInput.getText().clear();
+            amountInput.getText().clear();
+            amoutList.setSelection(0);
+
+            //Fortæller at produktet er oprettet
+            ok = true;
+
+            //Fjerner keyboard efter klik på knap
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(parent.getWindowToken(), 0);
+
+
+            //Tilføjelse af nyt produkt før
+            //bag.add(new Product(produktName, Integer.parseInt(amount)));
+        }
+        else { msg = "You have not typed both an amount and productname."; }
+
+        if(!ok) {
+
+            //Giver besked på, at der ikke er fuldt det nødvendige data til, at tilføje et nyt produkt
+            Context context = getApplicationContext();
+            CharSequence text = msg;
+            int duration = Toast.LENGTH_LONG;
+
+            Toast toast = Toast.makeText(context, text, duration);
+            toast.show();
+        }
+    }
+
+    private void appNotifications() {
+        String message = "";
+
+        //Finder gemt dato
+        String saveddate =  MyPreferenceFragment.getDate(this);
+
+        //Laver Kalender med ovenstående dato
+        Calendar calSaved = Calendar.getInstance();
+        calSaved.set(DatePreference.getYear(saveddate), DatePreference.getMonth(saveddate)-1, DatePreference.getDate(saveddate));
+
+        //Før nuværende dato
+        Calendar calDateNow = Calendar.getInstance();
+
+        //Beregner forskel i millisekunder
+        long diffMillis= Math.abs(calDateNow.getTimeInMillis()-calSaved.getTimeInMillis());
+
+        //Laver ovenstående om til dage
+        long differenceInDays = TimeUnit.DAYS.convert(diffMillis, TimeUnit.MILLISECONDS);
+
+        //Laver passende besked
+        if(differenceInDays == 0){
+            message = "Remember it's shopping day today.";
+        }
+        else if(calDateNow.compareTo(calSaved) > 0){
+            message = "Sopping day for "+ differenceInDays + " day(s) ago.";
+        }
+        else {
+            message = "Sopping in "+ differenceInDays + " day(s).";
+        }
+
+        //Giver brugeren den lavede besked
+        Toast toast2 = Toast.makeText(context, message + " " + MyPreferenceFragment.getName(context), Toast.LENGTH_LONG);
+        toast2.show();
     }
 }

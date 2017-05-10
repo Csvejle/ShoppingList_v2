@@ -218,7 +218,6 @@ public class LoginActivity extends BaseActivity implements
             //Går til shopping listen
             Intent intentLogin = new Intent(LoginActivity.this, MainActivity.class);
             startActivity(intentLogin);
-           // finish();
         }
     }
 
@@ -294,12 +293,4 @@ public class LoginActivity extends BaseActivity implements
             handleLayout(user);
         }
     }
-
-    /*
-    @Override
-    public void finish() {
-        Intent data = new Intent();
-        setResult(RESULT_OK, data);
-        super.finish();
-    }*/
 }
