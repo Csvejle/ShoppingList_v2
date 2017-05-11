@@ -1,8 +1,13 @@
 package org.projects.shoppinglist;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -12,7 +17,9 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.TaskStackBuilder;
 import android.support.v4.content.FileProvider;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -76,7 +83,9 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 
     String mCurrentPhotoPath; //Billedesti
 
-
+    /* key til BroadCastReceiver */
+    public static final String BROADCAST_KEY = "broadcastdata";
+    LocalBroadcastManager broadcastManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -170,11 +179,22 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
             });
 
 
-        //Hvis brugeren ønsker notificationer fortælles der,
-        //hvor mange dage til eller siden, der er shopping dag.
-        if(MyPreferenceFragment.wantNotifications(this)){
-            appNotifications();
-        }
+    //Notifikationer
+        if (savedInstanceState!=null) {
+            Boolean saved = savedInstanceState.getBoolean("appDown");
+            //USE saved bool???
+        }  else
+           {
+                //Hvis brugeren ønsker notificationer fortælles der,
+                //hvor mange dage til eller siden, der er shopping dag.
+                //Bemærk dette kun sker, hvis ikke der er gemt stadie = appen er genoprettet.
+                if(MyPreferenceFragment.wantNotifications(this)){
+                    appNotifications();
+                }
+           }
+
+        broadcastManager = LocalBroadcastManager.getInstance(this);
+        broadcastManager.registerReceiver(broadCastCode, new IntentFilter(BROADCAST_KEY));
 
         //er der gemt noget, som skal bruges til, at genskabe tidligere stadie
 		/*if (savedInstanceState!=null)
@@ -309,6 +329,8 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 
 		/* Kode til, at gemme nuværende stadie */
         //outState.putParcelableArrayList("SavedBag",bag); //Ikke nødvendigt nu, da data fra DB.
+
+        outState.putBoolean("appDown", true);
 
     }
 
@@ -445,6 +467,15 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
 
         Toast toast = Toast.makeText(context, text, duration);
         toast.show();
+
+
+
+        //systemNotification("No products", "What do you want to buy?");
+
+        //make a new intent to send to the activity
+        Intent in = new Intent(BROADCAST_KEY);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(in);
+
 
         // getMyAdapter().clear(); //Fjener alle items førhen
     }
@@ -687,6 +718,31 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         }
     }
 
+    public void systemNotification(String title,String message)
+    {
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+        stackBuilder.addParentStack(MainActivity.class);
+        stackBuilder.addNextIntent(new Intent(this, MainActivity.class));
+        PendingIntent pIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        //build the notification using the builder.
+        Notification notification = new Notification.Builder(this)
+                .setSmallIcon(R.mipmap.ic_shopping)  //icon
+                .setContentTitle(title)
+                .setAutoCancel(true)
+                .setPriority(Notification.PRIORITY_DEFAULT)
+                .setContentIntent(pIntent)
+                .setContentText(message)
+                .build();
+
+        //use the built in notification service
+        NotificationManager manager = (NotificationManager)
+                getSystemService(Context.NOTIFICATION_SERVICE);
+        //the 42 is just a ID number you choose.
+        manager.notify(40,notification);
+
+    }
+
     private void appNotifications() {
         String message = "";
 
@@ -721,4 +777,14 @@ public class MainActivity extends AppCompatActivity implements DeleteDialogFragm
         Toast toast2 = Toast.makeText(context, message + " " + MyPreferenceFragment.getName(context), Toast.LENGTH_LONG);
         toast2.show();
     }
+
+    public BroadcastReceiver broadCastCode = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null ) {
+                systemNotification("No products", "What do you want to buy?");
+                Log.d("ReceiverKode", "success");
+            }
+        }
+    };
 }

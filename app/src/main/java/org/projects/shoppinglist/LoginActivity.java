@@ -119,9 +119,14 @@ public class LoginActivity extends BaseActivity implements
 
         try {
             //Logger den bruger ind, som matcher angivet mail og password
+            //returner firebase.Promise, indeholder et non-null firebase.User
+            //Køre asynkron doc https://firebase.google.com/docs/reference/js/firebase.auth.Auth
             mAuth.signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener(LoginActivity.this, new OnCompleteListener<AuthResult>() {
+
+                        //Køre i baggunden og udføres, når login delen fra firebase side er færdig
                         @Override
+                                                    //Gemmer resulat af kaldet
                         public void onComplete(@NonNull Task<AuthResult> task) {
                             boolean ok = task.isSuccessful();
                             if (ok) {
